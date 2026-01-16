@@ -27,79 +27,57 @@
 3.  **持久化会话**: 将 (Cookie + Header + Signature + Payload) 作为一个原子单元存储。
 4.  **服务端重放**: Rust 后端通过 API 暴露这些能力。当客户端请求某个接口时，后端会**强制使用**数据库中存储的、已通过验证的 Payload 和签名进行请求，从而完美规避反爬策略。
 
-## 🚀 当前功能 (v1.2.0)
+## 🚀 当前功能 (v1.3.0)
 
-以下均为目前已实现并验证的功能：
+以下均为目前已实现并验证的功能，均基于 **"Pure Algorithm First" (纯算法优先)** 架构：
 
-*   **二维码扫码登录**: 从 DOM 中获取二维码图片信息，可以直接复制到浏览器展示，也可以客户端自行实现在控制台显示 ASCII 二维码。
-*   **实时登录状态查询** (NEW): 通过 `/api/auth/qrcode-status` 轮询扫码状态（未扫码/已扫码/登录成功）。
-*   **签名采集进度查询** (NEW): 通过 `/api/auth/capture-status` 查询后台签名采集是否完成。
-*   **会话持久化**: 登录成功后自动保存 Session，支持长时间复用（具体失效时间不可保证），无需频繁扫码。
 *   **全频道 Feed 采集**: 支持首页推荐及所有子频道（穿搭、美食、情感、游戏等 11 个频道）的数据获取。
-    *   *特色*: 采用拟人化遍历算法，精准捕获各频道专属签名。
-*   **热搜榜单**: 获取实时热搜关键词。
-*   **通知页采集**: 获取评论和 @ 、新增关注通知。
-*   **图文详情**: 获取指定笔记的评论列表，支持分页。
+*   **通知页采集**: 获取评论/@、新增关注、**赞和收藏** (NEW)。
+*   **图文详情**: 获取指定笔记的评论列表，支持分页，支持动态参数签名。
+*   **二维码扫码登录**: 从 DOM 中获取二维码图片信息。
+*   **实时登录状态查询**: 通过 `/api/auth/qrcode-status` 轮询扫码状态。
+*   **会话持久化**: 登录成功后自动保存 Session。
 
 ## 📅 开发日志 (Dev Log)
 
 | 版本 | 日期 | 更新内容 | 备注 |
 | :--- | :--- | :--- | :--- |
+| **v1.3.0** | 2026-01-16 | **架构重构与接口补全** | |
+| | | - 🏗️ **纯算法架构迁移**: 移除 Playwright 签名依赖，全面转向 Python Agent 实时签名 | 性能大幅提升，依赖减少 |
+| | | - 🐛 **修复 406 错误**: 修正 Notifications 接口的签名参数处理逻辑 (URL 参数编码) | 解决了 Mentions/Connections 接口调用失败问题 |
+| | | - 🎉 **新增接口**: 赞和收藏通知 (`/api/notification/likes`) | |
+| | | - 🔧 **增强接口**: Note Page 支持动态 URL 参数签名 | 解决了 `note_id` 和 `xsec_token` 动态变化的签名问题 |
+| | | - 🤖 **Agent 管理**: Rust 服务自动管理 Python Agent 生命周期 | 一键启动，无需手动运行 Python 脚本 |
 | **v1.2.0** | 2026-01-16 | **新增端点与代码优化** | |
-| | | - 🎉 新增 `/api/auth/qrcode-status` | 实时查询扫码登录状态 (0:未扫码/1:已扫码/2:成功) |
-| | | - 🎉 新增 `/api/auth/capture-status` | 查询签名采集进度 (是否完成、已采集数量) |
-| | | - 🐛 修复 Python 脚本 UTF-8 编码问题 | Windows 环境 Rust 读取 stdout 报错 |
-| | | - ⚡ 优化日志时区显示 | 从 UTC 改为本地时区 (默认 UTC+8) |
+| | | - 🎉 新增 `/api/auth/qrcode-status` | 实时查询扫码登录状态 |
+| | | - 🐛 修复 Python 脚本 UTF-8 编码问题 | |
 | **v1.1.0** | 2026-01-15 | **新增接口与模块重构** | |
-| | | - 新增通知页采集: `/api/notification/mentions` 和 `/connections` | 评论/@、新增关注 |
-| | | - 新增图文详情: `/api/note/page` | 笔记评论分页 |
-| | | - 重构 API 公共模块 `XhsApiClient` | Header/Cookie/Signature 统一管理 |
-| | | - 优化 Swagger 文档 | 详细列出 11 个 Feed 频道 |
-| | | - 修复浏览器关闭时崩溃问题 | 捕获 TargetClosedError |
-| **v1.0.0** | 2026-01-11 | **项目初始化 Release** | |
-| | | - 实现 Playwright 扫码登录流程 (Python) | 解决 Headless 模式风控 |
-| | | - 实现 Rust Axum API 服务端 | 提供 `/api/auth` 等接口 |
-| | | - 集成 MongoDB 存储凭证与签名 | |
-| | | - 实现 "11 频道" 拟人化自动采集策略 | 解决 "Illegal Request" |
-| | | - 优化 Client Demo 演示脚本 | 终端可视化测试 |
+| | | - 新增通知页采集: `/api/notification/mentions` 和 `/connections` | |
+| | | - 新增图文详情: `/api/note/page` | |
 
 ## 🛠️ 快速开始
 
-### 1. 环境准备
-- Rust (Cargo)
-- Python 3.8+
-- MongoDB (Running on localhost:27017)
-- Playwright (`playwright install chromium`)
-
-### 2. 启动服务
+### 1. 启动服务
+只需运行 Rust 服务，它会自动启动 Python Agent：
 ```bash
-# 1. 启动 Rust API 服务 (会自动调用 Python 脚本)
 cargo run
 ```
 
-### 3. 运行演示客户端
+### 2. 运行测试
 ```bash
-# 2. 在另一个终端运行测试脚本
 python client_demo.py
-
-# 第一次扫码登录完成，服务端（也就是api）会自动保存session，但采集发现页面各个频道的签名信息需要时间
-# 通常情况下当看到【Session Update: {"success": true, "user_id": "19badc2722c0lpxxm2re19ws4onlft8quq3u", "cookie_count": 13, "signatures_captured": ["home_feed_recommend", "search_trending", "home_feed_fashion", "home_feed_food", "home_feed_cosmetics", "home_feed_movie_and_tv", "home_feed_career", "home_feed_love", "home_feed_household_product", "home_feed_gaming", "home_feed_travel", "home_feed_fitness"], "error": null}】这样的信息说明采集完成，再次运行python client_demo.py可以验证接口可用，页面信息可获取
 ```
 
 ## 🔌 已验证 API 列表 (Implemented APIs)
 
 | Category | Endpoint | Status | Description |
 | :--- | :--- | :--- | :--- |
-| **Auth** | `/api/auth/login-session` | ✅ | 初始化登录会话 (流式响应) |
 | **Auth** | `/api/auth/session` | ✅ | 检查 Session 有效性 |
-| **Auth** | `/api/auth/qrcode-status` | ✅ | 实时查询扫码状态 (0:未扫码/1:已扫码/2:成功) |
-| **Auth** | `/api/auth/capture-status` | ✅ | 查询签名采集进度 |
-| **User** | `/api/user/me` | ✅ | 获取当前用户信息 |
-| **Search** | `/api/search/trending` | ✅ | 获取实时热搜关键词 |
-| **Feed** | `/api/feed/homefeed/{category}` | ✅ | 11 个垂直频道 (recommend/fashion/food/cosmetics/movie_and_tv/career/love/household_product/gaming/travel/fitness) |
+| **Feed** | `/api/feed/homefeed/{category}` | ✅ | 11 个垂直频道 (recommend/fashion/food...) |
 | **Notification** | `/api/notification/mentions` | ✅ | 获取评论和 @ 通知 |
 | **Notification** | `/api/notification/connections` | ✅ | 获取新增关注通知 |
-| **Note** | `/api/note/page` | ✅ | 获取笔记评论 (支持分页) |
+| **Notification** | `/api/notification/likes` | ✅ | **[NEW]** 获取赞和收藏通知 |
+| **Note** | `/api/note/page` | ✅ | 获取笔记评论 (支持动态参数签名) |
 
 ## 📚 接口文档 (API Docs)
 

@@ -12,8 +12,9 @@ pub struct UserCredentials {
     /// Key cookies: a1, web_session, webId, gid, xsecappid
     pub cookies: HashMap<String, String>,
     
-    /// The x-s-common header value captured from network requests
-    pub x_s_common: String,
+    /// The x-s-common header value captured from network requests (Optional in Pure Algo mode)
+    #[serde(default)]
+    pub x_s_common: Option<String>,
     
     /// When these credentials were first created
     pub created_at: bson::DateTime,
@@ -27,7 +28,7 @@ pub struct UserCredentials {
 
 impl UserCredentials {
     /// Create new credentials
-    pub fn new(user_id: String, cookies: HashMap<String, String>, x_s_common: String) -> Self {
+    pub fn new(user_id: String, cookies: HashMap<String, String>, x_s_common: Option<String>) -> Self {
         let now = bson::DateTime::now();
         Self {
             user_id,

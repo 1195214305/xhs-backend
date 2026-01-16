@@ -118,6 +118,6 @@ impl AuthService {
         // For now, we return empty strings as we need a different approach for signing
         let x_t = chrono::Utc::now().timestamp_millis();
         
-        Ok(("".to_string(), x_t, creds.x_s_common.clone()))
+        Ok(("".to_string(), x_t, creds.x_s_common.unwrap_or_default()))
     }
 }

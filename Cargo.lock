@@ -3217,6 +3217,7 @@ dependencies = [
  "log",
  "md5",
  "mongodb",
+ "once_cell",
  "qrcode",
  "rand 0.8.5",
  "reqwest",

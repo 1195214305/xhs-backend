@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-XHS Login Script - Main Entry Point
+XHS Login Script - Simplified Version (Pure Algorithm Architecture)
 
-Slim orchestration layer using xhs_playwright package.
+仅负责登录和 Cookie 获取，签名通过纯算法实时生成。
+
 Supports:
 - Interactive login with QR code display
 - Headless mode with JSON output
-- Signature capture for API endpoints
+- Cookie extraction for API signature generation
 """
 
 import sys
 import io
 
 # Force UTF-8 encoding for stdout/stderr on Windows
-# This ensures Rust can properly read the output
 if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
@@ -22,26 +22,18 @@ if sys.platform == 'win32':
 import json
 import asyncio
 import argparse
-from datetime import datetime
 from playwright.async_api import async_playwright
 
-# Import from xhs_playwright package
-from xhs_playwright import (
-    save_credentials,
-    SignatureCapture,
-)
+# Import from xhs_playwright package (simplified imports)
+from xhs_playwright import save_credentials
 from xhs_playwright.browser import (
     create_browser_context,
     setup_anti_detection,
     navigate_to_login,
     wait_for_login_complete,
-    trigger_signature_pages,
-    traverse_feed_channels,
-    trigger_notification_signatures,
-    trigger_note_page_signature,
     QrCodeStatusMonitor,
 )
-from xhs_playwright.qr_code import extract_from_page, base64_to_ascii
+from xhs_playwright.qr_code import extract_from_page
 
 
 async def run_extract_qr(headless: bool = False) -> dict:
@@ -63,22 +55,24 @@ async def run_extract_qr(headless: bool = False) -> dict:
         return qr_result
 
 
-async def run_full_login(headless: bool = False, json_mode: bool = False) -> dict:
+async def run_login(headless: bool = False, json_mode: bool = False) -> dict:
     """
-    Full login flow with signature capture.
+    Simplified login flow - Cookie only, no signature capture.
+    
+    纯算法架构下，签名通过 xhshow 库实时生成，
+    此脚本仅负责登录并获取 Cookie。
     
     Args:
         headless: Run browser headlessly
         json_mode: Output JSON only (for API integration)
         
     Returns:
-        dict with success, user_id, cookie_count, signatures_captured
+        dict with success, user_id, cookie_count
     """
     result = {
         "success": False,
         "user_id": None,
         "cookie_count": 0,
-        "signatures_captured": [],
         "error": None
     }
     
@@ -86,10 +80,6 @@ async def run_full_login(headless: bool = False, json_mode: bool = False) -> dic
         browser, context = await create_browser_context(p, headless)
         page = await context.new_page()
         await setup_anti_detection(page)
-        
-        # Set up signature capture (request)
-        sig_capture = SignatureCapture()
-        page.on("request", sig_capture.create_request_handler())
         
         # Set up QR status monitoring (response)
         qr_monitor = QrCodeStatusMonitor()
@@ -106,12 +96,10 @@ async def run_full_login(headless: bool = False, json_mode: bool = False) -> dic
         
         if qr_result["success"]:
             if json_mode:
-                # Output JSON format expected by Rust: QrCodeSessionResponse
-                # Fields: success, step, qr_base64, error
                 print(json.dumps({
                     "success": True,
                     "step": "qrcode",
-                    "qr_base64": qr_result["base64"]  # full data:image/png;base64,... URI
+                    "qr_base64": qr_result["base64"]
                 }), flush=True)
             else:
                 print("\n" + "="*50)
@@ -138,9 +126,8 @@ async def run_full_login(headless: bool = False, json_mode: bool = False) -> dic
         if not json_mode:
             print("\n\n✅ 登录成功！")
         
-        # Output QR status with login_info if available (from XHR monitoring)
+        # Output QR status with login_info if available
         if json_mode and qr_monitor.is_logged_in():
-            # 输出二维码状态接口返回的完整信息
             qr_status_response = qr_monitor.get_full_response()
             print(json.dumps({
                 "success": True,
@@ -148,55 +135,22 @@ async def run_full_login(headless: bool = False, json_mode: bool = False) -> dic
                 "data": qr_status_response.get("data", {})
             }), flush=True)
         
-        # [PRIORITY FIX] Save credentials IMMEDIATELY after login
-        # This ensures the session is usable even if signature capture fails later
+        # Save credentials (Cookie only, no signatures needed)
         cookies = login_result["cookies"]
-        # x_s_common might be captured during login flow, or empty initially
-        user_id = save_credentials(cookies, sig_capture.x_s_common)
+        user_id = save_credentials(cookies)  # x_s_common 不再需要
         
-        # Use user_id from qr_monitor.login_info if available
         if qr_monitor.login_info:
             result["login_info"] = qr_monitor.login_info
         
         if not json_mode:
-            print(f"[Login] 凭证已保存 (User ID: {user_id})")
-
-        # Navigate to capture more signatures (Basic only)
-        try:
-            print("[Browser] 开始基础签名采集...")
-            await trigger_signature_pages(page)
-            
-            # [ENABLED] Robotic traversal for full coverage
-            print("[Browser] 完成基础签名采集，开始拟人化遍历频道...")
-            await traverse_feed_channels(page) 
-            
-            # [v1.1.0] Notification page signatures
-            print("[Browser] 完成频道遍历，开始采集通知页签名...")
-            await trigger_notification_signatures(page) 
-            
-            # [v1.2.0] Note page signature (for comment API)
-            print("[Browser] 完成通知页，开始采集图文详情签名...")
-            await trigger_note_page_signature(page)
-            
-        except Exception as e:
-            import traceback
-            print(f"[Browser] ❌ 签名采集发生错误 (非致命): {e}")
-            print(traceback.format_exc())
-
-        await page.wait_for_timeout(2000)
-        
-        # Save signatures
-        saved_endpoints = sig_capture.save_all_signatures()
-        
-        if not json_mode:
-            for ep in saved_endpoints:
-                print(f"[签名捕获] 已保存 {ep} 签名")
+            print(f"[Login] ✅ Cookie 已保存 (User ID: {user_id})")
+            print("[Login] 纯算法架构：签名将在 API 请求时实时生成，无需采集")
         
         result["success"] = True
         result["user_id"] = user_id
         result["cookie_count"] = len(cookies)
-        result["signatures_captured"] = saved_endpoints
         
+        # 关闭浏览器 - 无需等待签名采集
         await browser.close()
     
     # Output JSON if in json_mode
@@ -208,7 +162,7 @@ async def run_full_login(headless: bool = False, json_mode: bool = False) -> dic
 
 def main():
     """CLI entry point"""
-    parser = argparse.ArgumentParser(description="XHS Login Script")
+    parser = argparse.ArgumentParser(description="XHS Login Script (Pure Algo Mode)")
     parser.add_argument("--mode", choices=["login", "extract-qr"], default="login",
                         help="Operation mode")
     parser.add_argument("--headless", action="store_true", 
@@ -223,8 +177,9 @@ def main():
         if args.json:
             print(json.dumps(result))
     else:
-        asyncio.run(run_full_login(headless=args.headless, json_mode=args.json))
+        asyncio.run(run_login(headless=args.headless, json_mode=args.json))
 
 
 if __name__ == "__main__":
     main()
+

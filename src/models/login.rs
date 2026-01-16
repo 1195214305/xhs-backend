@@ -143,7 +143,8 @@ pub struct SessionInfoData {
     pub user_id: String,
     pub cookie_count: usize,
     pub cookies: Vec<CookieInfo>,
-    pub x_s_common: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub x_s_common: Option<String>,
     pub created_at: String,
     pub is_valid: bool,
 }

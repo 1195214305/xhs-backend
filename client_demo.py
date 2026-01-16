@@ -65,17 +65,8 @@ def check_qrcode_status():
     except:
         return None
 
-def check_capture_status():
-    """检查采集任务状态"""
-    try:
-        req = urllib.request.Request(f"{BASE_URL}/api/auth/capture-status")
-        with urllib.request.urlopen(req) as response:
-            data = json.loads(response.read().decode('utf-8'))
-            if data.get("success") and data.get("data"):
-                return data["data"]
-            return None
-    except:
-        return None
+
+# [已移除] check_capture_status - 纯算法架构下不再需要采集状态检查
 
 def login_interactive():
     """交互式登录流程"""
@@ -187,41 +178,21 @@ def login_interactive():
                     print("\n❌ 登录超时")
                     return False
                 
-                # 阶段 2: 等待采集完成（无限轮询直到服务端返回完成）
-                print("\n等待签名采集", end="", flush=True)
+                # [纯算法架构] 登录成功后无需等待签名采集
+                # 签名通过 Agent Server 实时生成
+                print("\n[纯算法模式] 登录完成，签名将在 API 请求时实时生成")
                 
-                while True:
-                    capture = check_capture_status()
-                    if capture:
-                        if capture.get("is_complete"):
-                            count = capture.get("total_count", 0)
-                            message = capture.get("message", "")
-                            
-                            if count > 0:
-                                # 采集成功
-                                print(f"\n\n✅ 采集完成！")
-                                print(f"   签名数量: {count}")
-                                print(f"   已采集: {', '.join(capture.get('signatures_captured', []))}")
-                                
-                                # 阶段 3: 获取用户信息
-                                user = validate_session()
-                                if user:
-                                    print(f"   用户: {user.get('nickname')} (ID: {user.get('red_id')})")
-                                return True
-                            else:
-                                # 采集失败 (total_count == 0)
-                                print(f"\n\n❌ 采集失败！")
-                                print(f"   原因: {message}")
-                                return False
-                        # 显示当前采集进度
-                        current_count = capture.get("total_count", 0)
-                        if current_count > 0:
-                            print(f"({current_count})", end="", flush=True)
-                        else:
-                            print(".", end="", flush=True)
-                    else:
-                        print(".", end="", flush=True)
-                    time.sleep(2)
+                # 短暂等待确保 Cookie 已保存到数据库
+                time.sleep(2)
+                
+                # 验证 Session 是否可用
+                user = validate_session()
+                if user:
+                    print(f"   用户: {user.get('nickname')} (ID: {user.get('red_id')})")
+                    return True
+                else:
+                    print("   ⚠️ Session 验证失败，但登录流程已完成")
+                    return True  # 仍返回 True，让后续 API 测试自行验证
             else:
                 print(f"❌ API错误: {data}")
                 return False
@@ -409,6 +380,30 @@ def test_all_apis():
             for i, msg in enumerate(messages[:3]):
                 user = msg.get('user', {}).get('nickname', '未知')
                 print(f"    [{i+1}] {user} 开始关注你")
+        else:
+            print(f"    ⚠️ 无数据")
+            msg = data.get('msg')
+            if msg:
+                print(f"      {msg}")
+    except Exception as e:
+        print(f"    ❌ Error: {e}")
+
+    print("\n[+] GET /api/notification/likes (赞和收藏)")
+    try:
+        req = urllib.request.Request(f"{BASE_URL}/api/notification/likes")
+        with urllib.request.urlopen(req) as response:
+            data = json.loads(response.read().decode('utf-8'))
+        
+        if data.get("success"):
+            messages = data.get("data", {}).get("message_list", [])
+            print(f"    ✅ 获取赞和收藏成功 (消息数: {len(messages)})")
+            for i, msg in enumerate(messages[:3]):
+                user = msg.get('user_info', {}).get('nickname', '未知')
+                msg_type = msg.get('type', '')
+                if 'liked' in msg_type:
+                    print(f"    [{i+1}] {user} 赞了你的笔记")
+                else:
+                    print(f"    [{i+1}] {user} 收藏了你的笔记")
         else:
             print(f"    ⚠️ 无数据")
             msg = data.get('msg')

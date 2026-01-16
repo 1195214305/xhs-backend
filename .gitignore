@@ -16,3 +16,5 @@ qr_login.png
 latest_qr.png
 debug_qr.png
 *.log
+
+/doc/

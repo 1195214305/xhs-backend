@@ -284,12 +284,14 @@ pub async fn get_session_info(auth: &Arc<AuthService>) -> Result<crate::models::
                 }
             }).collect();
             
-            // Mask x_s_common (show first 30 chars)
-            let masked_xs_common = if creds.x_s_common.len() > 30 {
-                format!("{}...", &creds.x_s_common[..30])
-            } else {
-                creds.x_s_common.clone()
-            };
+            // Mask x_s_common (show first 30 chars, if present)
+            let masked_xs_common = creds.x_s_common.as_ref().map(|s| {
+                if s.len() > 30 {
+                    format!("{}...", &s[..30])
+                } else {
+                    s.clone()
+                }
+            });
             
             Ok(SessionInfoResponse {
                 code: 0,
