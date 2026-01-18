@@ -57,22 +57,28 @@ cargo run
 2.  自动启动 Python Agent (签名)。
 3.  启动 Rust Web Server。
 
-## 🚀 当前功能 (v1.4.0)
+## 🚀 当前功能 (v1.5.0)
 
 以下均为目前已实现并验证的功能：
 
 *   **纯 Rust 登录流程**: QR 码创建、状态轮询、登录确认全部 API 化，无需浏览器子进程。
-*   **全套搜索接口**: 支持搜索笔记(综合/视频/图文筛选)、搜索建议、OneBox、筛选器元数据。
+*   **全套搜索接口**: 支持搜索笔记(综合/视频/图文筛选)、搜索建议、OneBox、筛选器元数据、用户搜索。
 *   **全频道 Feed 采集**: 支持首页推荐及所有 10 个子频道（穿搭、美食、彩妆、影视、职场、情感、家居、游戏、旅行、健身）。
 *   **通知页采集**: 获取评论/@、新增关注、赞和收藏。
-*   **图文详情**: 获取指定笔记的评论列表，支持分页，支持动态参数签名。
+*   **笔记详情**: 获取指定笔记的完整内容（标题、正文、图片、标签）。
+*   **笔记评论**: 获取指定笔记的评论列表，支持分页。
 *   **实时签名**: Python Agent 提供 `xhshow` 算法实时签名。
 *   **高可靠性**: Playwright 访客 Cookie 获取支持重试机制（最多 3 次）。
+*   **模块化架构**: handlers 按领域拆分（search/auth/notification/user/feed），代码结构更清晰。
 
 ## 📅 开发日志 (Dev Log)
 
 | 版本 | 日期 | 更新内容 | 
 | :--- | :--- | :--- | 
+| **v1.5.0** | 2026-01-18 | **模块化重构 & Note API 完善** | 
+| | | - 🏗️ **Server 模块化**: `server.rs` 从 705行精简至 100行，handlers 按领域拆分为 5 个模块 | 
+| | | - 📝 **Note API**: 新增 `note/detail` 获取笔记详情，修正 `note/page` 为笔记评论 | 
+| | | - 📦 **OpenAPI 独立**: 抽离 `openapi.rs` 管理 API 文档 | 
 | **v1.4.0** | 2026-01-17 | **Search API Suite 完整实现** | 
 | | | - 🔍 **搜索全家桶**: 新增 `search/notes`, `recommend`, `onebox`, `filter` ,`usersearch` | 
 | | | - 📝 **Swagger 更新**: 新增 Search 聚合分组，完善 Request/Response 模型 | 
@@ -124,7 +130,8 @@ python client_demo.py
 | **Notification** | `/api/notification/mentions` | ✅ | 获取评论和 @ 通知 |
 | **Notification** | `/api/notification/connections` | ✅ | 获取新增关注通知 |
 | **Notification** | `/api/notification/likes` | ✅ | 获取赞和收藏通知 |
-| **Note** | `/api/note/page` | ✅ | 获取笔记内容及评论 |
+| **Note** | `/api/note/page` | ✅ | 获取笔记评论列表 |
+| **Note** | `/api/note/detail` | ✅ | **[NEW]** 获取笔记完整内容 |
 
 ## 📚 接口文档 (API Docs)
 

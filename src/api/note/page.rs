@@ -7,7 +7,7 @@ use serde::Deserialize;
 use std::sync::Arc;
 use crate::server::AppState;
 
-/// 图文详情请求参数
+/// 笔记评论页请求参数
 #[derive(Deserialize, utoipa::IntoParams)]
 pub struct NotePageParams {
     /// 笔记 ID (必填)
@@ -29,9 +29,10 @@ fn default_image_formats() -> String {
     "jpg,webp,avif".to_string()
 }
 
-/// 图文详情（评论分页）
+/// 笔记评论列表
 /// 
-/// 获取指定笔记的评论列表，支持分页
+/// 获取指定笔记的评论列表，支持分页。
+/// 注：此接口仅返回评论内容，如需获取笔记正文请使用 `/api/note/detail`。
 /// 
 /// 参数说明：
 /// - `note_id`: 笔记ID，从笔记URL或Feed中获取
@@ -41,10 +42,11 @@ fn default_image_formats() -> String {
     get,
     path = "/api/note/page",
     tag = "Note",
-    summary = "图文详情",
+    summary = "笔记评论列表",
+    description = "获取指定笔记的评论内容（分页）。如需获取笔记正文，请使用 /api/note/detail 接口。",
     params(NotePageParams),
     responses(
-        (status = 200, description = "笔记评论列表（原始JSON）"),
+        (status = 200, description = "评论列表（原始JSON）"),
         (status = 500, description = "请求失败")
     )
 )]
