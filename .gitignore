@@ -1,5 +1,4 @@
 /target
-/doc
 __pycache__/
 *.pyc
 *.pyo
@@ -17,3 +16,8 @@ qr_login.png
 latest_qr.png
 debug_qr.png
 *.log
+
+# Sensitive docs (not for public)
+doc/api_reference.md
+doc/reverse_engineering_research.md
+doc/feature_todo_*.md

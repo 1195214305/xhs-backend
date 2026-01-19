@@ -2,44 +2,58 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 /// Homefeed request body - 主页发现请求参数
+/// 
+/// 详细分页规则请参阅 `doc/homefeed_pagination.md`
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[schema(example = json!({
     "cursor_score": "",
-    "num": 47,
+    "num": 43,
     "refresh_type": 1,
-    "note_index": 34,
+    "note_index": 35,
     "unread_begin_note_id": "",
     "unread_end_note_id": "",
     "unread_note_count": 0,
     "category": "homefeed_recommend",
     "search_key": "",
-    "need_num": 22,
+    "need_num": 18,
     "image_formats": ["jpg", "webp", "avif"],
     "need_filter_image": false
 }))]
 pub struct HomefeedRequest {
+    /// 分页游标 (首次为空，后续使用 Response.data.cursor_score)
     #[serde(default)]
     pub cursor_score: String,
+    /// 固定值，建议设为 43
     #[serde(default = "default_num")]
     pub num: i32,
+    /// 刷新类型 (1=首次加载，3=滚动加载更多)
     #[serde(default = "default_refresh_type")]
     pub refresh_type: i32,
+    /// 累积索引 (首次任意，后续=上次值+返回数量+1)
     #[serde(default)]
     pub note_index: i32,
+    /// 未读起始ID (可留空)
     #[serde(default)]
     pub unread_begin_note_id: String,
+    /// 未读结束ID (可留空)
     #[serde(default)]
     pub unread_end_note_id: String,
+    /// 未读数量 (可设为0)
     #[serde(default)]
     pub unread_note_count: i32,
+    /// 频道标识 (如 homefeed.fashion_v3)
     #[serde(default = "default_category")]
     pub category: String,
+    /// 搜索关键词 (Feed模式留空)
     #[serde(default)]
     pub search_key: String,
+    /// 期望返回数量 (实际由服务端决定，建议18)
     #[serde(default = "default_need_num")]
     pub need_num: i32,
+    /// 图片格式 (建议 ["jpg","webp","avif"])
     #[serde(default = "default_image_formats")]
     pub image_formats: Vec<String>,
+    /// 是否过滤图片 (建议 false)
     #[serde(default)]
     pub need_filter_image: bool,
 }

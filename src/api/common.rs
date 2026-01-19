@@ -310,6 +310,42 @@ impl XhsApiClient {
         })
     }
 
+    /// 执行 POST 请求（使用用户提供的 payload）
+    /// 
+    /// 用于 homefeed 等需要用户控制分页参数的接口
+    /// 
+    /// # Arguments
+    /// * `endpoint_key` - 签名存储的 key（如 "home_feed_fashion"）
+    /// * `payload` - 用户提供的完整请求体
+    pub async fn post_with_payload(&self, endpoint_key: &str, payload: serde_json::Value) -> Result<String> {
+        let credentials = self.auth.try_get_credentials().await?
+            .ok_or_else(|| anyhow!("Not logged in. Please call /api/auth/login-session first."))?;
+        
+        let cookie_str = credentials.cookie_string();
+        
+        // 优先尝试纯算法签名
+        if let Some(uri) = endpoint_to_uri(endpoint_key) {
+            let url = format!("https://edith.xiaohongshu.com{}", uri);
+            let body = serde_json::to_string(&payload)?;
+            
+            match self.get_algo_signature("POST", uri, &cookie_str, Some(payload)).await {
+                Ok(signature) => {
+                    tracing::info!("[XhsApiClient] POST {} with custom payload using ALGO", endpoint_key);
+                    let response = self.build_post_request_algo(&url, &signature, &cookie_str, body)
+                        .send()
+                        .await?;
+                    return self.handle_response(response, endpoint_key).await;
+                }
+                Err(algo_err) => {
+                    tracing::warn!("[XhsApiClient] Algo failed for {}: {}", endpoint_key, algo_err);
+                    return Err(algo_err);
+                }
+            }
+        }
+        
+        Err(anyhow!("No URI mapping for endpoint: {}", endpoint_key))
+    }
+
     /// 执行 POST 请求（纯算法签名优先）
     /// 
     /// 优先使用 Python Agent 生成签名

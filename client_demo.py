@@ -2,10 +2,12 @@
 """
 XHS API 客户端演示 (Pure Rust Architecture v2.0)
 
-演示完整的登录流程和所有 API 端点测试
+测试模块位于 scripts/test_demo/
 """
+
+import sys
+import os
 import urllib.request
-import urllib.parse
 import json
 import time
 
@@ -16,7 +18,20 @@ try:
 except ImportError:
     HAS_QRCODE = False
 
+# Add scripts directory to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'scripts'))
+
 BASE_URL = "http://localhost:3005"
+
+from scripts.test_demo.test_user import test_user_me
+from scripts.test_demo.test_search import (
+    test_trending, test_search_recommend, test_search_notes,
+    test_search_onebox, test_search_user, test_search_filter
+)
+from scripts.test_demo.test_feed import test_homefeed, test_category_feeds
+from scripts.test_demo.test_notification import test_notifications
+from scripts.test_demo.test_note import test_note_page, test_note_detail
+from scripts.test_demo.test_pagination import test_homefeed_pagination
 
 
 # ============================================================================
@@ -137,348 +152,21 @@ def login_flow():
 
 
 # ============================================================================
-# API Tests
+# Main
 # ============================================================================
 
-def test_user_me():
-    """测试用户信息 API"""
-    print("\n[API] GET /api/user/me")
-    try:
-        req = urllib.request.Request(f"{BASE_URL}/api/user/me")
-        with urllib.request.urlopen(req, timeout=10) as response:
-            data = json.loads(response.read().decode('utf-8'))
-        
-        if data.get("success"):
-            user = data.get("data", {})
-            print(f"    ✅ 用户: {user.get('nickname')} (ID: {user.get('red_id')})")
-            return True
-        else:
-            print(f"    ❌ {data.get('msg')}")
-            return False
-    except Exception as e:
-        print(f"    ❌ Error: {e}")
-        return False
+def print_banner():
+    """打印启动横幅"""
+    print("\n" + "=" * 50)
+    print("      XHS API 客户端演示")
+    print("      (Pure Rust Architecture v2.0)")
+    print("=" * 50 + "\n")
 
 
-def test_trending():
-    """测试热搜 API"""
-    print("\n[API] GET /api/search/trending")
-    try:
-        req = urllib.request.Request(f"{BASE_URL}/api/search/trending")
-        with urllib.request.urlopen(req, timeout=10) as response:
-            data = json.loads(response.read().decode('utf-8'))
-        
-        if data.get("success"):
-            queries = data.get("data", {}).get("queries", [])
-            print(f"    ✅ 热搜 (Top 3):")
-            for q in queries[:3]:
-                print(f"       - {q.get('title', q.get('search_word', 'N/A'))}")
-            return True
-        else:
-            print(f"    ❌ {data.get('msg')}")
-            return False
-    except Exception as e:
-        print(f"    ❌ Error: {e}")
-        return False
-
-
-def test_homefeed():
-    """测试推荐流 API"""
-    print("\n[API] POST /api/feed/homefeed/recommend")
-    try:
-        req_data = json.dumps({
-            "cursor_score": "", "num": 5, "refresh_type": 1,
-            "note_index": 0, "category": "homefeed_recommend"
-        }).encode('utf-8')
-        
-        req = urllib.request.Request(
-            f"{BASE_URL}/api/feed/homefeed/recommend",
-            data=req_data, headers={'Content-Type': 'application/json'}, method='POST'
-        )
-        
-        with urllib.request.urlopen(req, timeout=15) as response:
-            data = json.loads(response.read().decode('utf-8'))
-        
-        if data.get("success"):
-            items = data.get("data", {}).get("items", [])
-            print(f"    ✅ 获取推荐流成功 (共 {len(items)} 条)")
-            for i, item in enumerate(items[:3]):
-                if "note_card" in item:
-                    note = item["note_card"]
-                    title = note.get('display_title', note.get('title', '无标题'))[:25]
-                    author = note.get('user', {}).get('nickname', '未知')
-                    print(f"       [{i+1}] {title}... (作者: {author})")
-            return True
-        else:
-            print(f"    ❌ {data.get('msg')}")
-            return False
-    except Exception as e:
-        print(f"    ❌ Error: {e}")
-        return False
-
-
-def test_notifications():
-    """测试通知 API"""
-    endpoints = [
-        ("/api/notification/mentions", "评论和@"),
-        ("/api/notification/connections", "新增关注"),
-        ("/api/notification/likes", "赞和收藏"),
-    ]
-    
-    for path, name in endpoints:
-        print(f"\n[API] GET {path} ({name})")
-        try:
-            req = urllib.request.Request(f"{BASE_URL}{path}")
-            with urllib.request.urlopen(req, timeout=10) as response:
-                data = json.loads(response.read().decode('utf-8'))
-            
-            if data.get("success"):
-                messages = data.get("data", {}).get("message_list", [])
-                print(f"    ✅ 获取成功 (消息数: {len(messages)})")
-            else:
-                print(f"    ⚠️ {data.get('msg', '无数据')}")
-        except Exception as e:
-            print(f"    ❌ Error: {e}")
-
-
-def test_category_feeds():
-    """测试所有分类 Feed API"""
-    categories = [
-        ("fashion", "穿搭"), ("food", "美食"), ("cosmetics", "彩妆"),
-        ("movie_and_tv", "影视"), ("career", "职场"), ("love", "情感"),
-        ("household_product", "家居"), ("gaming", "游戏"),
-        ("travel", "旅行"), ("fitness", "健身"),
-    ]
-    
-    for cat_key, cat_name in categories:
-        print(f"\n[API] POST /api/feed/homefeed/{cat_key} ({cat_name})")
-        try:
-            req_data = json.dumps({
-                "cursor_score": "", "num": 5, "refresh_type": 1,
-                "note_index": 0, "category": f"homefeed.{cat_key}_v3"
-            }).encode('utf-8')
-            
-            req = urllib.request.Request(
-                f"{BASE_URL}/api/feed/homefeed/{cat_key}",
-                data=req_data, headers={'Content-Type': 'application/json'}
-            )
-            
-            with urllib.request.urlopen(req, timeout=15) as response:
-                data = json.loads(response.read().decode('utf-8'))
-            
-            if data.get("success"):
-                items = data.get("data", {}).get("items", [])
-                print(f"    ✅ 获取{cat_name}成功 (共 {len(items)} 条)")
-            else:
-                print(f"    ⚠️ {data.get('msg', '无数据')}")
-        except Exception as e:
-            print(f"    ❌ Error: {e}")
-
-
-def test_note_page():
-    """测试笔记评论 API"""
-    print("\n[API] GET /api/note/page (笔记评论)")
-    try:
-        test_note_id = "695f0f1d00000000210317c5"
-        test_xsec_token = "ABSWQGp8zRp5VzyF6DXyPCnEsSakbUyTGAP3_so8877G4="
-        
-        params = urllib.parse.urlencode({
-            "note_id": test_note_id, "cursor": "",
-            "xsec_token": test_xsec_token, "image_formats": "jpg,webp,avif"
-        })
-        
-        req = urllib.request.Request(f"{BASE_URL}/api/note/page?{params}")
-        with urllib.request.urlopen(req, timeout=15) as response:
-            data = json.loads(response.read().decode('utf-8'))
-        
-        if data.get("success"):
-            comments = data.get("data", {}).get("comments", [])
-            print(f"    ✅ 获取笔记评论成功 (评论数: {len(comments)})")
-            for i, comment in enumerate(comments[:3]):
-                content = comment.get('content', '无内容')[:30]
-                user = comment.get('user_info', {}).get('nickname', '未知')
-                print(f"       [{i+1}] {user}: {content}...")
-        else:
-            print(f"    ⚠️ {data.get('msg', '无数据')}")
-    except Exception as e:
-        print(f"    ❌ Error: {e}")
-
-
-def test_note_detail():
-    """测试笔记详情 API"""
-    print("\n[API] POST /api/note/detail (笔记详情)")
-    try:
-        # 测试用的 note_id 和 xsec_token（实际使用时需从 feed/search 返回结果中获取）
-        test_note_id = "6965aba6000000000e03c2a2"
-        test_xsec_token = "AB2m6EqQi1pbRlTwRvPNNhTVyEFDjxlYoZBXgEcCczzEc="
-        
-        payload = {
-            "source_note_id": test_note_id,
-            "image_formats": ["jpg", "webp", "avif"],
-            "extra": {"need_body_topic": "1"},
-            "xsec_source": "pc_feed",
-            "xsec_token": test_xsec_token
-        }
-        data_json = json.dumps(payload).encode('utf-8')
-        req = urllib.request.Request(
-            f"{BASE_URL}/api/note/detail",
-            data=data_json,
-            headers={'Content-Type': 'application/json'}
-        )
-        with urllib.request.urlopen(req, timeout=15) as response:
-            data = json.loads(response.read().decode('utf-8'))
-        
-        if data.get("success"):
-            items = data.get("data", {}).get("items", [])
-            if items:
-                note_card = items[0].get("note_card", {})
-                title = note_card.get("title", "无标题")[:30]
-                user = note_card.get("user", {}).get("nickname", "未知")
-                print(f"    ✅ 获取笔记详情成功")
-                print(f"       标题: {title}")
-                print(f"       作者: {user}")
-            else:
-                print(f"    ⚠️ 获取成功但无数据")
-        else:
-            print(f"    ⚠️ {data.get('msg', '无数据')}")
-    except Exception as e:
-        print(f"    ❌ Error: {e}")
-
-def test_search_recommend():
-    """测试搜索推荐 API"""
-    print("\n[API] GET /api/search/recommend (搜索推荐)")
-    try:
-        keyword = "台州"
-        encoded_kw = urllib.parse.quote(keyword)
-        req = urllib.request.Request(f"{BASE_URL}/api/search/recommend?keyword={encoded_kw}")
-        with urllib.request.urlopen(req, timeout=10) as response:
-            data = json.loads(response.read().decode('utf-8'))
-        
-        if data.get("success"):
-            items = data.get("data", {}).get("sug_items", [])
-            print(f"    ✅ 获取搜索推荐成功 (关键词: {keyword}, 结果数: {len(items)})")
-            for i, item in enumerate(items[:3]):
-                print(f"       [{i+1}] {item.get('text', 'N/A')} ({item.get('type', 'unknown')})")
-        else:
-            print(f"    ❌ {data.get('msg')}")
-    except Exception as e:
-        print(f"    ❌ Error: {e}")
-
-
-def test_search_notes():
-    """测试搜索笔记 API"""
-    print("\n[API] POST /api/search/notes (搜索笔记)")
-    try:
-        # Client generates ID to share across requests
-        search_id = f"demo_sid_{int(time.time())}"
-        payload = {
-            "keyword": "台州招聘",
-            "page": 1,
-            "page_size": 10,
-            "sort": "general",
-            "note_type": 0,
-            "search_id": search_id,
-            "filters": [],
-            "geo": "",
-            "image_formats": ["jpg", "webp"]
-        }
-        data_json = json.dumps(payload).encode('utf-8')
-        req = urllib.request.Request(
-            f"{BASE_URL}/api/search/notes", 
-            data=data_json, 
-            headers={'Content-Type': 'application/json'}
-        )
-        with urllib.request.urlopen(req, timeout=20) as response:
-            data = json.loads(response.read().decode('utf-8'))
-        
-        if data.get("success"):
-            items = data.get("data", {}).get("items", [])
-            print(f"    ✅ 获取搜索笔记成功 (ID: {search_id}, 结果: {len(items)})")
-            return search_id
-        else:
-            print(f"    ❌ {data.get('msg')}")
-            return None
-    except Exception as e:
-        print(f"    ❌ Error: {e}")
-        return None
-
-def test_search_onebox(search_id):
-    """测试 OneBox API"""
-    if not search_id: return
-    print("\n[API] POST /api/search/onebox")
-    try:
-        payload = {
-            "keyword": "台州招聘",
-            "search_id": search_id,
-            "biz_type": "web_search_user"
-            # request_id generated by server if missing
-        }
-        data_json = json.dumps(payload).encode('utf-8')
-        req = urllib.request.Request(
-            f"{BASE_URL}/api/search/onebox", 
-            data=data_json, 
-            headers={'Content-Type': 'application/json'}
-        )
-        with urllib.request.urlopen(req, timeout=10) as response:
-            data = json.loads(response.read().decode('utf-8'))
-        
-        # onebox often returns success:false if no data, but that's a valid API response
-        print(f"    ✅ OneBox 调用完成: {data.get('msg')}, Success: {data.get('success')}")
-    except Exception as e:
-        print(f"    ❌ Error: {e}")
-
-def test_search_filter(search_id):
-    """测试 Filter API"""
-    if not search_id: return
-    print("\n[API] GET /api/search/filter")
-    try:
-        keyword = urllib.parse.quote("台州招聘")
-        sid = urllib.parse.quote(search_id)
-        url = f"{BASE_URL}/api/search/filter?keyword={keyword}&search_id={sid}"
-        with urllib.request.urlopen(url, timeout=10) as response:
-            data = json.loads(response.read().decode('utf-8'))
-        
-        if data.get("success"):
-            filters = data.get("data", {}).get("filters", [])
-            print(f"    ✅ 获取筛选器成功 (Filter Count: {len(filters)})")
-        else:
-            print(f"    ❌ {data.get('msg')}")
-    except Exception as e:
-        print(f"    ❌ Error: {e}")
-
-
-def test_search_user(search_id):
-    """测试用户搜索 API"""
-    if not search_id: return
-    print("\n[API] POST /api/search/usersearch (搜索用户)")
-    try:
-        payload = {
-            "keyword": "台州招聘",
-            "search_id": search_id,
-            "page": 1,
-            "page_size": 15,
-            "biz_type": "web_search_user"
-            # request_id managed by server
-        }
-        data_json = json.dumps(payload).encode('utf-8')
-        req = urllib.request.Request(
-            f"{BASE_URL}/api/search/usersearch", 
-            data=data_json, 
-            headers={'Content-Type': 'application/json'}
-        )
-        with urllib.request.urlopen(req, timeout=10) as response:
-            data = json.loads(response.read().decode('utf-8'))
-        
-        if data.get("success"):
-            users = data.get("data", {}).get("users", [])
-            print(f"    ✅ 获取用户列表成功 (Count: {len(users)})")
-            if users:
-                user = users[0]
-                print(f"       [1] {user.get('name')} (红薯号: {user.get('red_id')})")
-        else:
-            print(f"    ❌ {data.get('msg')}")
-    except Exception as e:
-        print(f"    ❌ Error: {e}")
+def check_session() -> bool:
+    """检查现有 Session 是否有效"""
+    print("\n[检查] 验证现有 Session...")
+    return test_user_me()
 
 
 def test_all_apis():
@@ -487,36 +175,44 @@ def test_all_apis():
     print("  开始测试所有 API 端点")
     print("=" * 50)
     
+    # User
     test_user_me()
+    
+    # Search
     test_trending()
     test_search_recommend()
     sid = test_search_notes()
     test_search_onebox(sid)
     test_search_user(sid)
     test_search_filter(sid)
+    
+    # Feed
     test_homefeed()
+    
+    # Notifications
     test_notifications()
+    
+    # Category Feeds
     test_category_feeds()
+    
+    # Notes
     test_note_page()
     test_note_detail()
+    
+    # Pagination Test (分页测试)
+    test_homefeed_pagination()
     
     print("\n" + "=" * 50)
     print("  ✅ 所有 API 测试完成")
     print("=" * 50)
 
 
-# ============================================================================
-# Main
-# ============================================================================
-
 def main():
-    print("\n" + "=" * 50)
-    print("      XHS API 客户端演示")
-    print("      (Pure Rust Architecture v2.0)")
-    print("=" * 50)
+    """主入口"""
+    print_banner()
     
-    print("\n[检查] 验证现有 Session...")
-    if test_user_me():
+    # Check session
+    if check_session():
         print("\n    Session 有效，跳过登录")
         test_all_apis()
         return
