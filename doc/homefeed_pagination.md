@@ -1,4 +1,4 @@
-# Homefeed 分页指南
+# Homefeed 分页payload指南
 
 本文档详细说明 Homefeed (主页发现) 接口的分页机制。
 
