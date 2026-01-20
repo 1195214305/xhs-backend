@@ -76,7 +76,7 @@ python client_demo.py
 | :--- | :--- | :--- | 
 | **v1.6.1** | 2026-01-20 | **Search Notes/Onebox 461 报错修复 & 分页指南** | 
 | | | - 🔧 **461 修复**: 移除多余 headers、调整 payload 字段顺序、修复 session 关联 | 
-| | | - � **分页指南**: 新增 [search_pagination.md](doc/search_pagination.md)、[usersearch_pagination.md](doc/usersearch_pagination.md) | 
+| | | - 📄 **分页指南**: 新增 [search_pagination.md](doc/search_pagination.md)、[usersearch_pagination.md](doc/usersearch_pagination.md) | 
 | **v1.6.0** | 2026-01-20 | **Homefeed 分页参数规则补充** | 
 | | | - 📄 **分页文档**: 新增 `doc/homefeed_pagination.md` 详细说明分页机制 | 
 | | | - 🔧 **参数更新**: `homefeed` 接口支持用户自定义 `cursor_score`、`note_index` 等分页参数 | 
