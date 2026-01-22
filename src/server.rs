@@ -9,6 +9,7 @@ use axum::{
 };
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use tower_http::cors::{Any, CorsLayer};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
@@ -90,6 +91,10 @@ pub async fn start_server() -> anyhow::Result<()> {
         .route("/api/auth/qrcode/status", get(handlers::poll_qrcode_status_handler))
         
         // Middleware
+        .layer(CorsLayer::new()
+            .allow_origin(Any)
+            .allow_methods(Any)
+            .allow_headers(Any))
         .layer(tower_http::trace::TraceLayer::new_for_http())
         .with_state(state);
 

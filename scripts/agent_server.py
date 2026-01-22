@@ -311,9 +311,6 @@ async def sync_login_cookies(request: SyncCookiesRequest):
                 except Exception as e:
                     logging.warning(f"[Cookie Sync] Search interaction error: {e}")
 
-                except Exception as e:
-                    logging.warning(f"[Cookie Sync] Search interaction error: {e}")
-
                 # 3. Wait for network idle (Critical for background layout requests)
                 try:
                     await page.wait_for_load_state("networkidle", timeout=5000)
