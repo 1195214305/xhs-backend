@@ -313,9 +313,12 @@ pub async fn check_qrcode_status(
             }
         }
     }
-    
-    
-    let status_response: QrCodeStatusResponse = response.json().await?;
+
+    // 先获取响应文本用于调试
+    let response_text = response.text().await?;
+    tracing::info!("QRCode status raw response: {}", response_text);
+
+    let status_response: QrCodeStatusResponse = serde_json::from_str(&response_text)?;
     
     // 如果登录成功，执行阻塞式 Cookie 同步
     let cookies_to_return = if let Some(data) = &status_response.data {
