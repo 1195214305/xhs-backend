@@ -1,6 +1,6 @@
 # 多阶段构建 - Rust 编译阶段
-# 使用 nightly 版本以支持 edition 2024
-FROM rustlang/rust:nightly-slim-bookworm AS rust-builder
+# 使用最新稳定版 Rust 1.84+
+FROM rust:1.84-slim-bookworm AS rust-builder
 
 WORKDIR /app
 
