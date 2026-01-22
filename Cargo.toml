@@ -28,7 +28,7 @@ tower-http = { version = "0.6", features = ["cors", "trace"] }
 # Dependencies for credential management (JSON file storage)
 chrono = { version = "0.4", features = ["serde"] }
 once_cell = "1"  # For lazy static agent manager
-qrcode = "0.14"  # For terminal ASCII QR code display
+qrcode = "0.13"  # For terminal ASCII QR code display (0.14 requires image 0.25 which needs edition 2024)
 urlencoding = "2.1.3"
 uuid = { version = "1", features = ["v4"] }
 time = { version = "0.3.36", features = ["macros", "local-offset"] }
