@@ -1,5 +1,6 @@
 # 多阶段构建 - Rust 编译阶段
-FROM rust:1.83-slim-bookworm AS rust-builder
+# 使用 nightly 版本以支持 edition 2024
+FROM rustlang/rust:nightly-slim-bookworm AS rust-builder
 
 WORKDIR /app
 
@@ -14,7 +15,8 @@ COPY Cargo.toml Cargo.lock ./
 
 # 创建虚拟 src 以缓存依赖
 RUN mkdir src && echo "fn main() {}" > src/main.rs
-RUN cargo build --release && rm -rf src
+RUN cargo build --release || true
+RUN rm -rf src
 
 # 复制实际源码并构建
 COPY src ./src
@@ -25,11 +27,12 @@ FROM python:3.11-slim-bookworm
 
 WORKDIR /app
 
-# 安装系统依赖
+# 安装系统依赖和 supervisord
 RUN apt-get update && apt-get install -y \
     libssl3 \
     ca-certificates \
     curl \
+    supervisor \
     && rm -rf /var/lib/apt/lists/*
 
 # 安装 Playwright 依赖
@@ -66,12 +69,40 @@ COPY --from=rust-builder /app/target/release/xhs-rs /app/xhs-rs
 # 复制 Python 脚本
 COPY scripts ./scripts
 
+# 创建 supervisord 配置
+RUN echo '[supervisord]\n\
+nodaemon=true\n\
+logfile=/dev/null\n\
+logfile_maxbytes=0\n\
+\n\
+[program:python-agent]\n\
+command=python -m uvicorn scripts.agent_server:app --host 127.0.0.1 --port 8765\n\
+directory=/app\n\
+autostart=true\n\
+autorestart=true\n\
+stdout_logfile=/dev/stdout\n\
+stdout_logfile_maxbytes=0\n\
+stderr_logfile=/dev/stderr\n\
+stderr_logfile_maxbytes=0\n\
+\n\
+[program:rust-server]\n\
+command=/app/xhs-rs\n\
+directory=/app\n\
+autostart=true\n\
+autorestart=true\n\
+stdout_logfile=/dev/stdout\n\
+stdout_logfile_maxbytes=0\n\
+stderr_logfile=/dev/stderr\n\
+stderr_logfile_maxbytes=0\n\
+' > /etc/supervisor/conf.d/app.conf
+
 # 设置环境变量
 ENV PORT=3000
 ENV RUST_LOG=info
+ENV PYTHON_AGENT_URL=http://127.0.0.1:8765
 
 # 暴露端口
 EXPOSE 3000
 
-# 启动命令
-CMD ["./xhs-rs"]
+# 使用 supervisord 同时启动两个服务
+CMD ["supervisord", "-c", "/etc/supervisor/conf.d/app.conf"]
